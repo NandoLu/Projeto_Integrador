@@ -15,27 +15,43 @@ from django.contrib.auth.decorators import login_required
 # from django.contrib.auth import update_session_auth_hash
 # from django.http import JsonResponse
 # from usuarios.views import login
+from .forms import EditarPersonagemForm
 
-def add_personagem(request): 
-    if request.method == "GET": 
-        artistas = Users.objects.filter(cargo="A") 
-        personagens = Personagem.objects.all() 
-        return render(request, 'add_personagem.html', {'artistas': artistas, 'personagens': personagens}) 
-    elif request.method == "POST": 
-        nome = request.POST.get('nome') 
-        artista_id = request.POST.get('artista') 
-        imagem = request.FILES.get('imagem') 
-        descricao = request.POST.get('descricao') 
-        personagem = Personagem(nome=nome, artista_id=artista_id, imagem=imagem, descricao=descricao) 
-        personagem.save() 
-        messages.add_message(request, messages.SUCCESS, 'Personagem adicionado com sucesso') 
+@login_required
+def add_personagem(request):
+    if request.method == "GET":
+        artistas = Users.objects.filter(cargo="A")
+        personagens = Personagem.objects.all()
+        return render(request, 'add_personagem.html', {'artistas': artistas, 'personagens': personagens})
+    elif request.method == "POST":
+        nome = request.POST.get('nome')
+        artista_id = request.POST.get('artista')
+        imagem = request.FILES.get('imagem')
+        descricao = request.POST.get('descricao')
+        personagem = Personagem(nome=nome, artista_id=artista_id, imagem=imagem, descricao=descricao)
+        personagem.save()
+        messages.add_message(request, messages.SUCCESS, 'Personagem adicionado com sucesso')
         return redirect(reverse('add_personagem'))
 
+@login_required
 def delete_personagem(request, personagem_id):
     personagem = get_object_or_404(Personagem, id=personagem_id)
     personagem.delete()
     messages.add_message(request, messages.SUCCESS, 'Personagem excluído com sucesso')
     return redirect(reverse('add_personagem'))
+
+@login_required
+def editar_personagem(request, personagem_id):
+    personagem = get_object_or_404(Personagem, id=personagem_id)
+    if request.method == 'POST':
+        form = EditarPersonagemForm(request.POST, request.FILES, instance=personagem)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Personagem atualizado com sucesso!')
+            return redirect('add_personagem')
+    else:
+        form = EditarPersonagemForm(instance=personagem)
+    return render(request, 'add_personagem.html', {'form': form, 'personagem': personagem})
 
 
 @login_required
@@ -80,6 +96,48 @@ def add_tirinha(request):
         messages.add_message(request, messages.SUCCESS, 'Tirinha adicionada com sucesso')
 
         return redirect(reverse('add_tirinha'))
+
+@login_required
+def editar_tirinha(request, tirinha_id):
+    tirinha = get_object_or_404(Tirinha, id=tirinha_id)
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo')
+        personagem_id = request.POST.get('personagem')
+        imagens = request.FILES.getlist('imagens')
+
+        tirinha.titulo = titulo
+        tirinha.personagem_id = personagem_id
+        tirinha.save()
+
+        if imagens:
+            Imagem.objects.filter(tirinha=tirinha).delete()
+            for f in imagens:
+                name = f'{date.today()}={tirinha.id}.jpg'
+
+                img = Image.open(f)
+                img = img.convert('RGB')
+                img = img.resize((600, 600))
+                draw = ImageDraw.Draw(img)
+                draw.text((20, 580), f"poesia_em_tirinhas {date.today()}", (255, 255, 255))
+                output = BytesIO()
+                img.save(output, format="JPEG", quality=100)
+                output.seek(0)
+                img_final = InMemoryUploadedFile(output, 
+                                                 'ImageField', 
+                                                 name, 
+                                                 'image/jpeg', 
+                                                 sys.getsizeof(output), 
+                                                 None)
+
+                img_dj = Imagem(imagem=img_final, tirinha=tirinha)
+                img_dj.save()
+
+        messages.success(request, 'Tirinha atualizada com sucesso!')
+        return redirect('add_tirinha')
+    else:
+        personagens = Personagem.objects.all()
+        return render(request, 'add_tirinha.html', {'tirinha': tirinha, 'personagens': personagens})
+
 
 @login_required
 def delete_tirinha(request, tirinha_id):

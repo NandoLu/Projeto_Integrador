@@ -53,7 +53,43 @@
                     <span class="badge badge-info">{{tirinha.personagem}}</span>
                     <br> <br>
                     <a href="{% url 'delete_tirinha' tirinha.id %}" class="btn btn-danger">Excluir</a>
-                    <a href="#" class="btn btn-secondary">Editar</a>
+                    <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#editModal{{ tirinha.id }}">Editar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="editModal{{ tirinha.id }}" tabindex="-1" role="dialog" aria-labelledby="editModalLabel{{ tirinha.id }}" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel{{ tirinha.id }}">Editar Tirinha</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form action="{% url 'editar_tirinha' tirinha.id %}" method="POST" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="titulo{{ tirinha.id }}">Titulo:</label>
+                                <input class="form-control" type="text" id="titulo{{ tirinha.id }}" name="titulo" value="{{ tirinha.titulo }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="personagem{{ tirinha.id }}">Personagem:</label>
+                                <select class="form-control" id="personagem{{ tirinha.id }}" name="personagem" required>
+                                    {% for personagem in personagens %}
+                                    <option value="{{ personagem.id }}" {% if personagem.id == tirinha.personagem.id %}selected{% endif %}>{{ personagem.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="imagens{{ tirinha.id }}">Imagens:</label>
+                                <input class="form-control" type="file" id="imagens{{ tirinha.id }}" name="imagens" multiple accept="image/*">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
